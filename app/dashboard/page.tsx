@@ -1,28 +1,53 @@
 import { getDiagnostics } from "@/app/actions/diagnostic";
 import Link from "next/link";
+import { calculateDashboardStats, getHealthStatus } from "@/lib/utils/dashboard-calculations";
+import { RegionDistributionChart } from "@/components/charts/region-distribution-chart";
+import { GaugeChart } from "@/components/charts/gauge-chart";
 
 /**
- * Page Dashboard
- * Affiche un aperçu général avec les statistiques et les derniers diagnostics
+ * Page Dashboard DACE
+ * Vue d'ensemble complète avec statistiques avancées et graphiques
  */
 export default async function DashboardPage() {
   const result = await getDiagnostics();
   const diagnostics = result.success ? (result.data as any[]) : [];
+  const stats = calculateDashboardStats(diagnostics);
+  const healthStatus = getHealthStatus(stats.averageSaturation);
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-          Dashboard
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Vue d'ensemble de vos diagnostics aéroportuaires
-        </p>
+      {/* En-tête avec statut global */}
+      <div className="rounded-lg border border-zinc-200 bg-gradient-to-r from-blue-50 to-purple-50 p-8 dark:border-zinc-700 dark:from-blue-950/30 dark:to-purple-950/30">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-zinc-900 dark:text-white">
+              Dashboard DACE
+            </h1>
+            <p className="mt-2 text-lg text-zinc-600 dark:text-zinc-400">
+              Vue d'ensemble de vos diagnostics aéroportuaires
+            </p>
+          </div>
+          {stats.averageSaturation !== null && (
+            <div className="text-right">
+              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                État Global
+              </p>
+              <div className={`mt-2 inline-flex items-center gap-2 rounded-full ${healthStatus.bgColor} px-4 py-2`}>
+                <div className={`h-2 w-2 rounded-full ${healthStatus.color.replace('text-', 'bg-')}`}></div>
+                <span className={`text-sm font-semibold ${healthStatus.color}`}>
+                  {healthStatus.label}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                Saturation moyenne: {stats.averageSaturation}%
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Statistiques */}
-      <div className="grid gap-6 md:grid-cols-3">
+      {/* Statistiques principales */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Total diagnostics */}
         <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
           <div className="flex items-center justify-between">
@@ -96,14 +121,7 @@ export default async function DashboardPage() {
                 Ce mois
               </p>
               <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-white">
-                {
-                  diagnostics.filter((d) => {
-                    const createdAt = new Date(d.createdAt);
-                    const monthAgo = new Date();
-                    monthAgo.setMonth(monthAgo.getMonth() - 1);
-                    return createdAt >= monthAgo;
-                  }).length
-                }
+                {stats.thisMonth}
               </p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-950">
@@ -123,7 +141,166 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Aéroports critiques */}
+        <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                Critiques
+              </p>
+              <p className="mt-2 text-3xl font-bold text-red-600 dark:text-red-400">
+                {stats.criticalAirports}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Saturation {'>'} 90%
+              </p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950">
+              <svg
+                className="h-6 w-6 text-red-600 dark:text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* KPI et Graphiques */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Jauges KPI */}
+        <div className="lg:col-span-1 space-y-6">
+          {stats.averageSaturation !== null && (
+            <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-4">
+                📊 Saturation Moyenne
+              </h3>
+              <GaugeChart value={stats.averageSaturation} label="Réseau" />
+            </div>
+          )}
+          {stats.averageOccupation !== null && (
+            <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-4">
+                🎯 Occupation Moyenne
+              </h3>
+              <GaugeChart value={stats.averageOccupation} label="Réseau" />
+            </div>
+          )}
+        </div>
+
+        {/* Répartition par région */}
+        <div className="lg:col-span-2 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-4">
+            🗺️ Répartition Géographique
+          </h3>
+          <RegionDistributionChart data={stats.byRegion} />
+        </div>
+      </div>
+
+      {/* Top & Bottom Performers */}
+      {stats.topPerformers.length > 0 && (
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Top Performers */}
+          <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-950">
+                <svg className="h-4 w-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                🏆 Meilleurs Performances
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {stats.topPerformers.map((airport, index) => (
+                <div key={airport.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-400">
+                      #{index + 1}
+                    </span>
+                    <span className="text-sm font-medium text-zinc-900 dark:text-white">
+                      {airport.nom}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                    {Math.round(airport.score)}/100
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Performers */}
+          <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-950">
+                <svg className="h-4 w-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                ⚠️ Nécessitent Attention
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {stats.bottomPerformers.map((airport) => (
+                <div key={airport.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50">
+                  <span className="text-sm font-medium text-zinc-900 dark:text-white">
+                    {airport.nom}
+                  </span>
+                  <span className="text-sm font-semibold text-red-600 dark:text-red-400">
+                    {Math.round(airport.score)}/100
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Capacité globale */}
+      {stats.totalCapacity > 0 && (
+        <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-4">
+            📊 Capacité Totale du Réseau
+          </h3>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Capacité Totale</p>
+              <p className="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {(stats.totalCapacity / 1000).toFixed(1)}M
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">passagers/an</p>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Trafic Actuel</p>
+              <p className="mt-2 text-2xl font-bold text-orange-600 dark:text-orange-400">
+                {(stats.totalTraffic / 1000).toFixed(1)}M
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">passagers/an</p>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Marge Disponible</p>
+              <p className="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">
+                {((stats.totalCapacity - stats.totalTraffic) / 1000).toFixed(1)}M
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                {Math.round(((stats.totalCapacity - stats.totalTraffic) / stats.totalCapacity) * 100)}% restant
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Actions rapides */}
       <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">

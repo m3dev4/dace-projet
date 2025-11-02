@@ -38,20 +38,70 @@ export async function createDiagnostic(
     let data: Partial<DiagnosticInput>;
 
     if (formData instanceof FormData) {
+      // Helper pour convertir les valeurs FormData
+      const getString = (key: string) => {
+        const val = formData.get(key);
+        return val === "" || val === null ? undefined : String(val);
+      };
+
+      const getNumber = (key: string) => {
+        const val = formData.get(key);
+        if (val === "" || val === null) return null;
+        const num = Number(val);
+        return isNaN(num) ? null : num;
+      };
+
       data = {
+        // Informations générales
         nomAeroport: formData.get("nomAeroport") as string,
         localisation: formData.get("localisation") as string,
-        pistes: formData.get("pistes") as string | undefined,
-        terminaux: formData.get("terminaux") as string | undefined,
-        postesAeronefs: formData.get("postesAeronefs") as string | undefined,
-        tourControle: formData.get("tourControle") as string | undefined,
-        fluxPassagers: formData.get("fluxPassagers") as string | undefined,
-        equipementsSecurite: formData.get("equipementsSecurite") as string | undefined,
-        servicesTechniques: formData.get("servicesTechniques") as string | undefined,
-        notesObservation: formData.get("notesObservation") as string | undefined,
+        codeIATA: getString("codeIATA"),
+        codeICAO: getString("codeICAO"),
         dateDiagnostic: formData.get("dateDiagnostic")
           ? new Date(formData.get("dateDiagnostic") as string)
           : new Date(),
+
+        // Composantes physiques (numériques)
+        nombrePistes: getNumber("nombrePistes"),
+        capaciteHorairePistes: getNumber("capaciteHorairePistes"),
+        longueurPistePrincipale: getNumber("longueurPistePrincipale"),
+        nombreTerminaux: getNumber("nombreTerminaux"),
+        capacitePassagersAn: getNumber("capacitePassagersAn"),
+        fluxPassagersHeurePte: getNumber("fluxPassagersHeurePte"),
+        nombrePostesTotal: getNumber("nombrePostesTotal"),
+        nombrePostesContact: getNumber("nombrePostesContact"),
+        nombrePostesDistants: getNumber("nombrePostesDistants"),
+        hauteurTourControle: getNumber("hauteurTourControle"),
+
+        // KPI
+        tauxSaturation: getNumber("tauxSaturation"),
+        tauxOccupation: getNumber("tauxOccupation"),
+        tempsMoyenTraitement: getNumber("tempsMoyenTraitement"),
+        passagersAnActuel: getNumber("passagersAnActuel"),
+        volsReguliers: getNumber("volsReguliers"),
+        periodesPointe: getString("periodesPointe"),
+
+        // Composantes fonctionnelles (texte)
+        cheminementPassagers: getString("cheminementPassagers"),
+        routageAvions: getString("routageAvions"),
+        normesOACIIATA: getString("normesOACIIATA"),
+        niveauxSecurite: getString("niveauxSecurite"),
+        exigencesConfort: getString("exigencesConfort"),
+        pointsFriction: getString("pointsFriction"),
+        equipementsSecurite: getString("equipementsSecurite"),
+        servicesTechniques: getString("servicesTechniques"),
+
+        // Optimisation
+        optimisationLegere: getString("optimisationLegere"),
+        optimisationMoyenne: getString("optimisationMoyenne"),
+        optimisationLourde: getString("optimisationLourde"),
+        estimationImpacts: getString("estimationImpacts"),
+        estimationCouts: getNumber("estimationCouts"),
+
+        // Observations
+        notesObservation: getString("notesObservation"),
+        contraintesStructurelles: getString("contraintesStructurelles"),
+        donneesLocales: getString("donneesLocales"),
       };
     } else {
       data = formData;
@@ -60,19 +110,28 @@ export async function createDiagnostic(
     // Validation des données avec Zod
     const validatedData = diagnosticSchema.parse(data);
 
-    // Conversion des chaînes vides en null pour la base de données
+    // Conversion pour la base de données (Zod gère déjà les nullables)
     const dbData = {
-      nomAeroport: validatedData.nomAeroport,
-      localisation: validatedData.localisation,
-      pistes: validatedData.pistes || null,
-      terminaux: validatedData.terminaux || null,
-      postesAeronefs: validatedData.postesAeronefs || null,
-      tourControle: validatedData.tourControle || null,
-      fluxPassagers: validatedData.fluxPassagers || null,
+      ...validatedData,
+      // Conversion des chaînes vides en null pour les champs optionnels
+      codeIATA: validatedData.codeIATA || null,
+      codeICAO: validatedData.codeICAO || null,
+      periodesPointe: validatedData.periodesPointe || null,
+      cheminementPassagers: validatedData.cheminementPassagers || null,
+      routageAvions: validatedData.routageAvions || null,
+      normesOACIIATA: validatedData.normesOACIIATA || null,
+      niveauxSecurite: validatedData.niveauxSecurite || null,
+      exigencesConfort: validatedData.exigencesConfort || null,
+      pointsFriction: validatedData.pointsFriction || null,
       equipementsSecurite: validatedData.equipementsSecurite || null,
       servicesTechniques: validatedData.servicesTechniques || null,
+      optimisationLegere: validatedData.optimisationLegere || null,
+      optimisationMoyenne: validatedData.optimisationMoyenne || null,
+      optimisationLourde: validatedData.optimisationLourde || null,
+      estimationImpacts: validatedData.estimationImpacts || null,
       notesObservation: validatedData.notesObservation || null,
-      dateDiagnostic: validatedData.dateDiagnostic,
+      contraintesStructurelles: validatedData.contraintesStructurelles || null,
+      donneesLocales: validatedData.donneesLocales || null,
     };
 
     // Création du diagnostic dans la base de données

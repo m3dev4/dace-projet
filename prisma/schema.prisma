@@ -17,20 +17,76 @@ model Diagnostic {
   id                    String   @id @default(cuid())
   nomAeroport          String
   localisation         String
+  codeIATA             String?  // Code IATA (ex: CMN, RAK)
+  codeICAO             String?  // Code ICAO (ex: GMMN, GMMX)
   
-  // Composantes physiques
-  pistes               String?  // Description des pistes
-  terminaux            String?  // Description des terminaux
-  postesAeronefs       String?  // Description des postes aéronefs
-  tourControle         String?  // Description de la tour de contrôle
+  // ========== COMPOSANTES PHYSIQUES (Quantitatives) ==========
   
-  // Composantes fonctionnelles
-  fluxPassagers        String?  // Description des flux passagers
+  // Pistes
+  nombrePistes         Int?     // Nombre de pistes
+  capaciteHorairePistes Float?  // Capacité horaire selon FAA (mouvements/heure)
+  longueurPistePrincipale Int?  // Longueur en mètres
+  
+  // Terminaux
+  nombreTerminaux      Int?     // Nombre de terminaux
+  capacitePassagersAn  Int?     // Capacité annuelle en millions de passagers
+  fluxPassagersHeurePte Float?  // Flux simultané en heure de pointe
+  
+  // Postes aéronefs
+  nombrePostesTotal    Int?     // Nombre total de postes de stationnement
+  nombrePostesContact  Int?     // Nombre de postes avec passerelle
+  nombrePostesDistants Int?     // Nombre de postes distants
+  
+  // Tour de contrôle
+  hauteurTourControle  Int?     // Hauteur de la tour en mètres
+  
+  // ========== INDICATEURS DE PERFORMANCE (KPI) ==========
+  
+  // Taux et ratios
+  tauxSaturation       Float?   // Taux de saturation (%)
+  tauxOccupation       Float?   // Taux d'occupation (%)
+  tempsMoyenTraitement Float?   // Temps moyen de traitement (minutes)
+  
+  // Trafic actuel
+  passagersAnActuel    Int?     // Passagers/an actuels (en milliers)
+  volsReguliers        Int?     // Nombre de vols réguliers/jour
+  periodesPointe       String?  // Périodes de pointe (description)
+  
+  // ========== COMPOSANTES FONCTIONNELLES (Qualitatives) ==========
+  
+  // Flux et cheminements
+  cheminementPassagers String?  // Description du cheminement passagers
+  routageAvions        String?  // Description du routage avions
+  
+  // Sécurité et normes
+  normesOACIIATA       String?  // Conformité aux normes OACI/IATA
+  niveauxSecurite      String?  // Niveaux de sécurité appliqués
+  exigencesConfort     String?  // Exigences de confort et sécurité
+  
+  // Points de friction
+  pointsFriction       String?  // Points de friction ou saturation identifiés
+  
+  // Équipements techniques
   equipementsSecurite  String?  // Description des équipements de sécurité
   servicesTechniques   String?  // Description des services techniques
   
-  // Observations et métadonnées
+  // ========== ÉVALUATION ET OPTIMISATION ==========
+  
+  // Scénarios d'optimisation
+  optimisationLegere   String?  // Procédures, organisation, signalisation
+  optimisationMoyenne  String?  // Ajout de modules temporaires ou équipements
+  optimisationLourde   String?  // Agrandissement, nouvelle infrastructure
+  
+  // Estimations
+  estimationImpacts    String?  // Estimation des impacts et du coût
+  estimationCouts      Float?   // Estimation sommaire des coûts (en millions)
+  
+  // ========== OBSERVATIONS ET MÉTADONNÉES ==========
+  
   notesObservation     String?  // Notes d'observation (texte libre)
+  contraintesStructurelles String? // Contraintes structurelles, environnementales
+  donneesLocales       String?  // Plans, observations, données terrain
+  
   dateDiagnostic       DateTime @default(now())
   
   createdAt            DateTime @default(now())
